@@ -224,6 +224,10 @@
     background: #7c5cfc;
     color: white;
     box-shadow: 0 4px 20px rgba(124,92,252,0.4);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   #mic-btn:hover { background: #6a4de0; box-shadow: 0 4px 24px rgba(124,92,252,0.6); }
   #mic-btn.listening {
@@ -362,7 +366,7 @@
 <div id="bottom">
   <div id="transcript-display">Tap the mic to speak</div>
   <div class="mic-center">
-    <button id="mic-btn" onclick="toggleMic(event)" title="Tap to speak">🎤</button>
+    <button id="mic-btn" title="Tap to speak">🎤</button>
   </div>
   <div class="input-row">
     <textarea id="text-input" placeholder="Or type a question…" rows="1"
@@ -524,8 +528,7 @@ function setupRecognition() {
   return r;
 }
 
-function toggleMic(e) {
-  if (e) { e.preventDefault(); e.stopPropagation(); }
+function toggleMic() {
   if (isWaiting) return;
   if (isListening) { stopMic(); return; }
   if (!recognition) recognition = setupRecognition();
@@ -756,6 +759,17 @@ async function callClaude(key, typingDiv) {
 
 // ─── INIT ───────────────────────────────────────────────────────────────────
 loadSettings();
+
+// Wire mic button via touchstart (suppresses native tap sound on mobile)
+const micBtn = document.getElementById('mic-btn');
+micBtn.addEventListener('touchstart', function(e) {
+  e.preventDefault(); // blocks the tap sound
+  toggleMic();
+}, { passive: false });
+// Fallback for desktop
+micBtn.addEventListener('click', function(e) {
+  if (!('ontouchstart' in window)) toggleMic();
+});
 </script>
 </body>
 </html>

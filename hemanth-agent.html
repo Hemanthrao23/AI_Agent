@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Hemanth's AI Agent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f0f13;
+    color: #e8e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 16px 20px;
+    background: #16161e;
+    border-bottom: 1px solid #2a2a3a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .header-left h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #c8a8ff;
+  }
+  .header-left p {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .settings-btn {
+    background: #2a2a3a;
+    border: 1px solid #3a3a5a;
+    color: #aaa;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .settings-btn:hover { background: #3a3a4a; color: #e8e8f0; }
+
+  /* Settings panel */
+  #settings-panel {
+    display: none;
+    background: #16161e;
+    border-bottom: 1px solid #2a2a3a;
+    padding: 16px 20px;
+    gap: 12px;
+    flex-direction: column;
+  }
+  #settings-panel.open { display: flex; }
+
+  .setting-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .setting-row label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .setting-row input, .setting-row select {
+    background: #0f0f13;
+    border: 1px solid #3a3a5a;
+    color: #e8e8f0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+  }
+  .setting-row input:focus, .setting-row select:focus {
+    outline: none;
+    border-color: #7c5cfc;
+  }
+  .save-btn {
+    background: #7c5cfc;
+    border: none;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .save-btn:hover { background: #6a4de0; }
+
+  /* Chat area */
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .msg {
+    max-width: 88%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.user {
+    align-self: flex-end;
+    background: #7c5cfc;
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.assistant {
+    align-self: flex-start;
+    background: #1e1e2e;
+    color: #e8e8f0;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #2a2a3a;
+  }
+  .msg.assistant.streaming { border-color: #7c5cfc44; }
+
+  .msg.error {
+    align-self: flex-start;
+    background: #2e1e1e;
+    color: #ff6b6b;
+    border: 1px solid #5a2a2a;
+  }
+
+  .typing-indicator {
+    display: flex;
+    gap: 5px;
+    padding: 4px 0;
+    align-items: center;
+  }
+  .typing-indicator span {
+    width: 7px; height: 7px;
+    background: #7c5cfc;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* Bottom bar */
+  #bottom {
+    padding: 12px 16px;
+    background: #16161e;
+    border-top: 1px solid #2a2a3a;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #transcript-display {
+    font-size: 14px;
+    color: #888;
+    min-height: 20px;
+    text-align: center;
+    font-style: italic;
+  }
+  #transcript-display.active { color: #c8a8ff; }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  #text-input {
+    flex: 1;
+    background: #0f0f13;
+    border: 1px solid #3a3a5a;
+    color: #e8e8f0;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    resize: none;
+    height: 44px;
+    max-height: 120px;
+    line-height: 1.4;
+    font-family: inherit;
+  }
+  #text-input:focus { outline: none; border-color: #7c5cfc; }
+
+  #mic-btn {
+    width: 54px;
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    background: #2a2a3a;
+    color: #aaa;
+  }
+  #mic-btn:hover { background: #7c5cfc; color: white; }
+  #mic-btn.listening {
+    background: #e53e3e;
+    color: white;
+    animation: pulse-mic 1s infinite;
+  }
+  @keyframes pulse-mic {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(229,62,62,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(229,62,62,0); }
+  }
+
+  #send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    background: #7c5cfc;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  #send-btn:hover { background: #6a4de0; }
+  #send-btn:disabled { background: #2a2a3a; color: #555; cursor: not-allowed; }
+
+  .model-badge {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+  }
+
+  /* Welcome */
+  .welcome {
+    align-self: center;
+    text-align: center;
+    padding: 30px 20px;
+    max-width: 320px;
+  }
+  .welcome .avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c5cfc, #c8a8ff);
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+  .welcome h2 { font-size: 18px; color: #c8a8ff; margin-bottom: 8px; }
+  .welcome p { font-size: 14px; color: #666; line-height: 1.6; }
+
+  .suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .chip {
+    background: #1e1e2e;
+    border: 1px solid #3a3a5a;
+    color: #aaa;
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip:hover { background: #2a2a3a; color: #e8e8f0; border-color: #7c5cfc; }
+
+  /* No API key warning */
+  .no-key-banner {
+    background: #2e1e00;
+    border: 1px solid #6b4200;
+    color: #ffb347;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: center;
+    margin: 8px 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Hemanth's AI Agent</h1>
+    <p>Senior Data Engineer · 9+ years exp</p>
+  </div>
+  <button class="settings-btn" onclick="toggleSettings()">⚙ Settings</button>
+</header>
+
+<div id="settings-panel">
+  <div class="setting-row">
+    <label>API Provider</label>
+    <select id="provider-select">
+      <option value="openai">OpenAI (GPT-4o)</option>
+      <option value="claude">Anthropic (Claude)</option>
+    </select>
+  </div>
+  <div class="setting-row">
+    <label>API Key</label>
+    <input type="password" id="api-key-input" placeholder="Paste your API key here…" />
+  </div>
+  <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+</div>
+
+<div id="no-key-banner" class="no-key-banner" style="display:none">
+  ⚠ No API key set. Tap ⚙ Settings to add your OpenAI or Claude API key.
+</div>
+
+<div id="chat">
+  <div class="welcome" id="welcome-msg">
+    <div class="avatar">👤</div>
+    <h2>Hi, I'm Hemanth's Agent</h2>
+    <p>Ask me anything about Hemanth's background, skills, or experience — or any general question.</p>
+    <div class="suggestion-chips">
+      <div class="chip" onclick="sendChip(this)">Tell me about yourself</div>
+      <div class="chip" onclick="sendChip(this)">What's your work authorization?</div>
+      <div class="chip" onclick="sendChip(this)">What cloud platforms do you know?</div>
+      <div class="chip" onclick="sendChip(this)">What are your salary expectations?</div>
+      <div class="chip" onclick="sendChip(this)">Are you open to relocation?</div>
+      <div class="chip" onclick="sendChip(this)">What is data engineering?</div>
+    </div>
+  </div>
+</div>
+
+<div id="bottom">
+  <div id="transcript-display">Tap 🎤 to speak or type below</div>
+  <div class="input-row">
+    <textarea id="text-input" placeholder="Type a question…" rows="1"
+      onkeydown="handleEnter(event)" oninput="autoResize(this)"></textarea>
+    <button id="mic-btn" onclick="toggleMic()" title="Hold to speak">🎤</button>
+    <button id="send-btn" onclick="sendText()" title="Send">➤</button>
+  </div>
+  <div class="model-badge" id="model-badge">Set your API key in ⚙ Settings</div>
+</div>
+
+<script>
+// ─── PERSONAL CONTEXT ──────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You ARE Hemanth Rao. Speak entirely in first person ("I", "my", "me"). Never say "Hemanth" or refer to yourself in third person. You are answering interview questions, recruiter calls, and general questions on his behalf.
+
+PERSONAL BACKGROUND:
+- Name: Hemanth Rao
+- Phone: +1 (720)-409-3163
+- Email: hemanth.rao.yr@gmail.com
+- Came to USA in 2016 on H1B, sponsored by CA Technologies
+- Married; wife sponsored my Green Card
+- Immigration status: Green Card / GC EAD — I can work for ANY employer, no sponsorship needed
+- Open to: C2C, C2H, 1099
+- Current rate: ~$75/hr but flexible — happy to discuss the best rate for the right role
+- Open to relocation: YES
+- Good standing with current employer
+
+PROFESSIONAL BACKGROUND:
+- 9+ years as a Data Engineer
+- Expert in AWS and Microsoft Azure
+- Specialties: ETL/ELT pipelines, data lakes, data warehouses, real-time streaming
+- Languages: Python, SQL, PySpark, Scala
+- Tools: Apache Spark, Kafka, Delta Lake, AWS Glue, Azure Data Factory, Azure Databricks, Azure Synapse Analytics, Amazon Redshift
+- DevOps: Git, CI/CD, Terraform, Docker, Kubernetes
+- BI: Power BI, Tableau
+
+WORK HISTORY:
+1. Citizens Financial Group – Providence, RI | May 2025–Present | Senior Data Engineer
+   - Azure Data Factory, Azure Databricks, Azure Synapse Analytics
+   - Medallion architecture (Bronze/Silver/Gold), Delta Lake, lakehouse design
+   - Real-time analytics with Azure Event Hubs and Stream Analytics
+   - Data governance with Microsoft Purview
+
+2. Optum – Eden Prairie, MN | Jan 2023–April 2025 | Senior Data Engineer
+   - Enterprise Azure data platform, data mesh architecture
+   - Delta Lake, CDC frameworks, schema evolution
+   - Hybrid on-prem + Azure integration
+   - Data observability with Azure Monitor
+
+3. Macy's – New York, NY | Oct 2020–Dec 2022 | Data Engineer
+   - AWS S3 data lake, AWS Lambda, Amazon EMR with Spark
+   - Kinesis + Kafka real-time streaming
+   - Amazon Redshift optimization, AWS Glue ETL
+
+4. DTCC – Jersey City, NJ | July 2018–Sept 2020 | Data Engineer
+   - AWS event-driven architecture (Lambda, EventBridge, Step Functions)
+   - Spark on EMR, Kinesis streaming, CDC frameworks
+   - Migrated legacy ETL (Informatica, SSIS, Hadoop) to AWS
+
+5. CA Technologies – India | Sept 2016–Feb 2018 | ETL Developer
+   - Metadata-driven ETL, SQL Server, Oracle, MySQL, PostgreSQL
+   - This role sponsored my H1B to come to the USA
+
+=== ANSWER FRAMEWORKS — USE THESE ALWAYS ===
+
+1. "TELL ME ABOUT YOURSELF" → Use Present → Past → Future:
+   Present: Current role and what I do now
+   Past: How I got here, key career highlights
+   Future: What I'm looking for next
+   Example opening: "I'm a Senior Data Engineer with 9+ years of experience..."
+
+2. BEHAVIORAL QUESTIONS ("Tell me about a time...", "Give me an example...", "How did you handle...") → Use STAR method:
+   Situation: Set the context briefly
+   Task: What was my responsibility
+   Action: What I specifically did (use "I", be specific)
+   Result: Measurable outcome
+   Always end with a result — numbers, impact, or outcome.
+
+3. TECHNICAL QUESTIONS → Answer clearly and concisely, use examples from my experience where relevant.
+
+4. SALARY / RATE QUESTIONS → "I'm currently at $75/hr but I'm flexible. I'm more focused on finding the right opportunity and I'm open to discussing the best rate for the role."
+
+5. WORK AUTHORIZATION → "I have a Green Card with EAD — I can work for any employer without sponsorship and can start quickly."
+
+TONE: Confident, professional, concise. Sound like a real person in an interview — not a resume being read aloud. Use natural language. Keep answers focused and not too long unless the question requires depth.`;
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let messages = [];
+let recognition = null;
+let isListening = false;
+let isWaiting = false;
+
+// ─── SETTINGS ──────────────────────────────────────────────────────────────
+function loadSettings() {
+  const provider = localStorage.getItem('ai_provider') || 'openai';
+  const key = localStorage.getItem('ai_key') || '';
+  document.getElementById('provider-select').value = provider;
+  document.getElementById('api-key-input').value = key;
+  updateModelBadge(provider, !!key);
+  document.getElementById('no-key-banner').style.display = key ? 'none' : 'block';
+}
+
+function saveSettings() {
+  const provider = document.getElementById('provider-select').value;
+  const key = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('ai_provider', provider);
+  localStorage.setItem('ai_key', key);
+  updateModelBadge(provider, !!key);
+  document.getElementById('no-key-banner').style.display = key ? 'none' : 'block';
+  document.getElementById('settings-panel').classList.remove('open');
+}
+
+function updateModelBadge(provider, hasKey) {
+  const badge = document.getElementById('model-badge');
+  if (!hasKey) { badge.textContent = 'Set your API key in ⚙ Settings'; return; }
+  badge.textContent = provider === 'openai' ? 'GPT-4o mini · OpenAI' : 'Claude Haiku · Anthropic';
+}
+
+function toggleSettings() {
+  document.getElementById('settings-panel').classList.toggle('open');
+}
+
+// ─── SPEECH RECOGNITION ────────────────────────────────────────────────────
+function setupRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById('mic-btn').title = 'Speech not supported — use text input';
+    return null;
+  }
+  const r = new SpeechRecognition();
+  r.continuous = false;
+  r.interimResults = true;
+  r.lang = 'en-US';
+
+  r.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    const display = document.getElementById('transcript-display');
+    if (final) {
+      display.textContent = final;
+      display.classList.remove('active');
+      stopMic();
+      sendMessage(final.trim());
+    } else {
+      display.textContent = interim || '…';
+      display.classList.add('active');
+    }
+  };
+
+  r.onerror = (e) => {
+    console.error('Speech error:', e.error);
+    stopMic();
+    document.getElementById('transcript-display').textContent = 'Mic error: ' + e.error;
+  };
+
+  r.onend = () => stopMic();
+  return r;
+}
+
+function toggleMic() {
+  if (isWaiting) return;
+  if (isListening) { stopMic(); return; }
+  if (!recognition) recognition = setupRecognition();
+  if (!recognition) { alert('Speech recognition not supported. Please use Chrome or Safari.'); return; }
+  try {
+    recognition.start();
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('mic-btn').textContent = '⏹';
+    document.getElementById('transcript-display').textContent = 'Listening…';
+    document.getElementById('transcript-display').classList.add('active');
+  } catch(e) { console.error(e); }
+}
+
+function stopMic() {
+  if (!isListening) return;
+  isListening = false;
+  document.getElementById('mic-btn').classList.remove('listening');
+  document.getElementById('mic-btn').textContent = '🎤';
+  try { recognition && recognition.stop(); } catch(e) {}
+}
+
+// ─── TEXT INPUT ─────────────────────────────────────────────────────────────
+function handleEnter(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendText();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function sendText() {
+  const input = document.getElementById('text-input');
+  const text = input.value.trim();
+  if (!text || isWaiting) return;
+  input.value = '';
+  input.style.height = '44px';
+  sendMessage(text);
+}
+
+function sendChip(el) {
+  sendMessage(el.textContent);
+}
+
+// ─── CHAT ───────────────────────────────────────────────────────────────────
+function addMsg(role, text, streaming = false) {
+  const welcome = document.getElementById('welcome-msg');
+  if (welcome) welcome.remove();
+
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role + (streaming ? ' streaming' : '');
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const welcome = document.getElementById('welcome-msg');
+  if (welcome) welcome.remove();
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.id = 'typing-indicator';
+  div.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+async function sendMessage(text) {
+  if (!text) return;
+  const key = localStorage.getItem('ai_key') || '';
+  if (!key) {
+    addMsg('error', '⚠ Please set your API key in ⚙ Settings first.');
+    return;
+  }
+
+  addMsg('user', text);
+  messages.push({ role: 'user', content: text });
+  document.getElementById('transcript-display').textContent = '';
+  document.getElementById('transcript-display').classList.remove('active');
+
+  isWaiting = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('mic-btn').disabled = true;
+
+  const provider = localStorage.getItem('ai_provider') || 'openai';
+  const typing = showTyping();
+
+  try {
+    let reply = '';
+    if (provider === 'openai') {
+      reply = await callOpenAI(key, typing);
+    } else {
+      reply = await callClaude(key, typing);
+    }
+    typing.remove();
+    const msgDiv = addMsg('assistant', reply);
+    messages.push({ role: 'assistant', content: reply });
+  } catch (err) {
+    typing.remove();
+    addMsg('error', '⚠ Error: ' + (err.message || 'Unknown error. Check your API key.'));
+  }
+
+  isWaiting = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('mic-btn').disabled = false;
+}
+
+// ─── OPENAI ─────────────────────────────────────────────────────────────────
+async function callOpenAI(key, typingDiv) {
+  const body = {
+    model: 'gpt-4o-mini',
+    stream: true,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messages
+    ]
+  };
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err.error && err.error.message) || 'OpenAI API error ' + res.status);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let full = '';
+  typingDiv.innerHTML = '';
+  typingDiv.className = 'msg assistant streaming';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    for (const line of chunk.split('\n')) {
+      const l = line.trim();
+      if (!l || l === 'data: [DONE]') continue;
+      if (l.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(l.slice(6));
+          const delta = data.choices?.[0]?.delta?.content || '';
+          full += delta;
+          typingDiv.textContent = full;
+          document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+        } catch {}
+      }
+    }
+  }
+  return full;
+}
+
+// ─── CLAUDE ─────────────────────────────────────────────────────────────────
+async function callClaude(key, typingDiv) {
+  const body = {
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    stream: true,
+    system: SYSTEM_PROMPT,
+    messages: messages
+  };
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err.error && err.error.message) || 'Claude API error ' + res.status);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let full = '';
+  typingDiv.innerHTML = '';
+  typingDiv.className = 'msg assistant streaming';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    for (const line of chunk.split('\n')) {
+      const l = line.trim();
+      if (!l) continue;
+      if (l.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(l.slice(6));
+          if (data.type === 'content_block_delta' && data.delta?.text) {
+            full += data.delta.text;
+            typingDiv.textContent = full;
+            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+          }
+        } catch {}
+      }
+    }
+  }
+  return full;
+}
+
+// ─── INIT ───────────────────────────────────────────────────────────────────
+loadSettings();
+</script>
+</body>
+</html>
